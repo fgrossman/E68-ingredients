@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Print QR Codes — E68</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .qr-grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 560px) {
+        .qr-grid { grid-template-columns: 1fr 1fr; }
+      }
+      .qr-card {
+        background: #fff;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        text-align: center;
+      }
+      .qr-card h3 { margin: 0 0 12px; color: var(--brand-dark); }
+      .qr-card canvas { width: 240px; height: 240px; max-width: 100%; }
+      .qr-card .url {
+        font-size: 0.8rem;
+        color: var(--muted);
+        word-break: break-all;
+        margin-top: 10px;
+      }
+      .qr-card .caption { margin-top: 8px; font-weight: 600; }
+      @media print {
+        .topbar, .instructions, #printBtn { display: none !important; }
+        .qr-card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>QR Codes</h1>
+      <a class="link-btn" href="index.html">Home</a>
+    </div>
+    <div class="wrap">
+      <p class="instructions">
+        Print these and place them on the food shelves. People scan the one in
+        their language to see ingredients. (These point at this exact website.)
+      </p>
+      <button class="btn accent" id="printBtn" style="margin-bottom:16px">🖨️ Print these QR codes</button>
+      <div class="qr-grid">
+        <div class="qr-card">
+          <h3>English</h3>
+          <canvas id="qrEn"></canvas>
+          <div class="caption">Scan for ingredients</div>
+          <div class="url" id="urlEn"></div>
+        </div>
+        <div class="qr-card">
+          <h3>Español</h3>
+          <canvas id="qrEs"></canvas>
+          <div class="caption">Escanee para ver ingredientes</div>
+          <div class="url" id="urlEs"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+      const base = new URL("view.html", window.location.href).href;
+      const enUrl = base + "?lang=en";
+      const esUrl = base + "?lang=es";
+      document.getElementById("urlEn").textContent = enUrl;
+      document.getElementById("urlEs").textContent = esUrl;
+      const opts = { width: 240, margin: 1 };
+      QRCode.toCanvas(document.getElementById("qrEn"), enUrl, opts);
+      QRCode.toCanvas(document.getElementById("qrEs"), esUrl, opts);
+      document.getElementById("printBtn").onclick = () => window.print();
+    </script>
+  </body>
+</html>

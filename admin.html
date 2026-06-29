@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin — E68 Ingredients</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>Admin</h1>
+      <button class="link-btn hidden" id="logoutBtn">Log out</button>
+    </div>
+
+    <div class="wrap">
+      <!-- Login -->
+      <div id="loginView">
+        <p class="instructions">Log in to manage and delete photos.</p>
+        <form id="loginForm">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="error hidden" id="loginError"></div>
+          <button class="btn block" id="loginSubmit" type="submit">Log in</button>
+        </form>
+      </div>
+
+      <!-- Manage -->
+      <div id="manageView" class="hidden">
+        <p class="instructions">
+          Tap <strong>Delete</strong> to permanently remove a food and its photos.
+        </p>
+        <div id="adminContent">
+          <div class="center"><div class="spinner"></div>Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const sb = getClient();
+
+      function showManage(yes) {
+        $("loginView").classList.toggle("hidden", yes);
+        $("manageView").classList.toggle("hidden", !yes);
+        $("logoutBtn").classList.toggle("hidden", !yes);
+      }
+
+      $("loginForm").onsubmit = async (e) => {
+        e.preventDefault();
+        $("loginError").classList.add("hidden");
+        $("loginSubmit").disabled = true;
+        const { error } = await sb.auth.signInWithPassword({
+          email: $("email").value.trim(),
+          password: $("password").value,
+        });
+        $("loginSubmit").disabled = false;
+        if (error) {
+          $("loginError").textContent = error.message;
+          $("loginError").classList.remove("hidden");
+          return;
+        }
+        showManage(true);
+        loadList();
+      };
+
+      $("logoutBtn").onclick = async () => {
+        await sb.auth.signOut();
+        showManage(false);
+      };
+
+      async function loadList() {
+        const c = $("adminContent");
+        const { data, error } = await sb
+          .from("products")
+          .select("id,name,packet_path,ingredients_path,created_at")
+          .order("created_at", { ascending: false });
+        if (error) {
+          c.innerHTML = '<div class="center error">' + error.message + "</div>";
+          return;
+        }
+        if (!data || data.length === 0) {
+          c.innerHTML = '<div class="center">No items yet.</div>';
+          return;
+        }
+        const list = document.createElement("div");
+        list.className = "card-list";
+        data.forEach((r) => {
+          const row = document.createElement("div");
+          row.className = "row";
+          const date = new Date(r.created_at).toLocaleDateString();
+          row.innerHTML =
+            '<img src="' + publicUrl(r.packet_path) + '" alt="" />' +
+            '<div class="meta"><div class="name">' +
+            (r.name ? escapeHtml(r.name) : "(no name)") +
+            '</div><div class="date">' + date + "</div></div>";
+          const btn = document.createElement("button");
+          btn.className = "btn danger";
+          btn.textContent = "Delete";
+          btn.onclick = () => del(r, row, btn);
+          row.appendChild(btn);
+          list.appendChild(row);
+        });
+        c.innerHTML = "";
+        c.appendChild(list);
+      }
+
+      async function del(r, row, btn) {
+        if (!confirm("Delete this food and its photos? This cannot be undone.")) return;
+        btn.disabled = true;
+        btn.textContent = "Deleting…";
+        try {
+          const rm = await sb.storage
+            .from(CONFIG.BUCKET)
+            .remove([r.packet_path, r.ingredients_path]);
+          if (rm.error) throw rm.error;
+          const d = await sb.from("products").delete().eq("id", r.id);
+          if (d.error) throw d.error;
+          row.remove();
+        } catch (err) {
+          alert("Delete failed: " + (err.message || err));
+          btn.disabled = false;
+          btn.textContent = "Delete";
+        }
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+        );
+      }
+
+      // Stay logged in if a session already exists.
+      (async () => {
+        const { data } = await sb.auth.getSession();
+        if (data && data.session) {
+          showManage(true);
+          loadList();
+        }
+      })();
+    </script>
+  </body>
+</html>

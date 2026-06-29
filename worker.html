@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Food Photos — E68</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>Add Food Photos</h1>
+      <a class="link-btn" href="index.html">Home</a>
+    </div>
+
+    <div class="wrap">
+      <p class="instructions">
+        Take 2 photos for each food: first the <strong>ingredients list</strong>
+        on the box, then one <strong>individual packet</strong> from inside.
+      </p>
+
+      <div class="stepper">
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+      </div>
+
+      <!-- START -->
+      <div id="stageStart" class="capture-stage">
+        <p class="step-sub">Tap the button to start a new food.</p>
+        <button class="plus-btn" id="startBtn" aria-label="Add new food">+</button>
+      </div>
+
+      <!-- BOX / INGREDIENTS PHOTO -->
+      <div id="stageBox" class="capture-stage hidden">
+        <div class="step-label">Step 1 of 2</div>
+        <p class="step-sub">Photograph the <strong>ingredients list</strong> on the box.</p>
+        <img id="boxPreview" class="preview hidden" alt="Ingredients preview" />
+        <div class="btn-row">
+          <button class="btn" id="boxTakeBtn">📷 Take photo</button>
+          <button class="btn secondary hidden" id="boxRetakeBtn">↺ Retake</button>
+          <button class="btn accent hidden" id="boxNextBtn">Next →</button>
+        </div>
+      </div>
+
+      <!-- PACKET PHOTO -->
+      <div id="stagePacket" class="capture-stage hidden">
+        <div class="step-label">Step 2 of 2</div>
+        <p class="step-sub">Photograph <strong>one individual packet</strong> from the box.</p>
+        <img id="packetPreview" class="preview hidden" alt="Packet preview" />
+        <div class="field" id="nameField" style="max-width:460px;margin:0 auto 16px;text-align:left">
+          <label for="nameInput">Name / label (optional)</label>
+          <input id="nameInput" type="text" placeholder="e.g. Maple Oatmeal" />
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="packetTakeBtn">📷 Take photo</button>
+          <button class="btn secondary hidden" id="packetRetakeBtn">↺ Retake</button>
+          <button class="btn accent hidden" id="saveBtn">✓ Save</button>
+        </div>
+        <p style="margin-top:14px"><button class="link-btn" id="backToBox" style="color:var(--muted)">← Back</button></p>
+      </div>
+
+      <!-- UPLOADING -->
+      <div id="stageUploading" class="capture-stage hidden">
+        <div class="spinner"></div>
+        <p class="step-sub">Saving photos…</p>
+      </div>
+
+      <!-- DONE -->
+      <div id="stageDone" class="capture-stage hidden">
+        <div class="step-label" style="font-size:2rem">✓</div>
+        <p class="step-sub">Saved! It’s now visible to everyone.</p>
+        <button class="btn block" id="againBtn" style="max-width:320px;margin:0 auto">+ Add another food</button>
+      </div>
+    </div>
+
+    <!-- Hidden camera inputs -->
+    <input type="file" id="boxInput" accept="image/*" capture="environment" class="hidden" />
+    <input type="file" id="packetInput" accept="image/*" capture="environment" class="hidden" />
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const stages = {
+        start: $("stageStart"),
+        box: $("stageBox"),
+        packet: $("stagePacket"),
+        uploading: $("stageUploading"),
+        done: $("stageDone"),
+      };
+      let boxBlob = null;
+      let packetBlob = null;
+
+      function show(stage) {
+        Object.values(stages).forEach((s) => s.classList.add("hidden"));
+        stages[stage].classList.remove("hidden");
+        $("dot1").classList.toggle("active", stage === "box");
+        $("dot2").classList.toggle("active", stage === "packet");
+      }
+
+      function toast(msg) {
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+      }
+
+      // ---- Start ----
+      $("startBtn").onclick = () => {
+        boxBlob = null;
+        packetBlob = null;
+        $("boxPreview").classList.add("hidden");
+        $("boxRetakeBtn").classList.add("hidden");
+        $("boxNextBtn").classList.add("hidden");
+        $("boxTakeBtn").classList.remove("hidden");
+        show("box");
+        $("boxInput").click();
+      };
+
+      // ---- Box photo ----
+      $("boxTakeBtn").onclick = () => $("boxInput").click();
+      $("boxRetakeBtn").onclick = () => $("boxInput").click();
+      $("boxInput").onchange = async (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        try {
+          boxBlob = await compressImage(file);
+          $("boxPreview").src = URL.createObjectURL(boxBlob);
+          $("boxPreview").classList.remove("hidden");
+          $("boxTakeBtn").classList.add("hidden");
+          $("boxRetakeBtn").classList.remove("hidden");
+          $("boxNextBtn").classList.remove("hidden");
+        } catch (err) {
+          toast("Could not read that photo. Please try again.");
+        }
+      };
+      $("boxNextBtn").onclick = () => {
+        $("packetPreview").classList.add("hidden");
+        $("packetRetakeBtn").classList.add("hidden");
+        $("saveBtn").classList.add("hidden");
+        $("packetTakeBtn").classList.remove("hidden");
+        show("packet");
+        $("packetInput").click();
+      };
+
+      // ---- Packet photo ----
+      $("backToBox").onclick = () => show("box");
+      $("packetTakeBtn").onclick = () => $("packetInput").click();
+      $("packetRetakeBtn").onclick = () => $("packetInput").click();
+      $("packetInput").onchange = async (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        try {
+          packetBlob = await compressImage(file);
+          $("packetPreview").src = URL.createObjectURL(packetBlob);
+          $("packetPreview").classList.remove("hidden");
+          $("packetTakeBtn").classList.add("hidden");
+          $("packetRetakeBtn").classList.remove("hidden");
+          $("saveBtn").classList.remove("hidden");
+        } catch (err) {
+          toast("Could not read that photo. Please try again.");
+        }
+      };
+
+      // ---- Save ----
+      $("saveBtn").onclick = async () => {
+        if (!boxBlob || !packetBlob) {
+          toast("Both photos are required.");
+          return;
+        }
+        show("uploading");
+        try {
+          const sb = getClient();
+          const id = uid();
+          const ingredientsPath = `${id}/ingredients.jpg`;
+          const packetPath = `${id}/packet.jpg`;
+
+          const up1 = await sb.storage
+            .from(CONFIG.BUCKET)
+            .upload(ingredientsPath, boxBlob, { contentType: "image/jpeg" });
+          if (up1.error) throw up1.error;
+
+          const up2 = await sb.storage
+            .from(CONFIG.BUCKET)
+            .upload(packetPath, packetBlob, { contentType: "image/jpeg" });
+          if (up2.error) throw up2.error;
+
+          const name = $("nameInput").value.trim();
+          const ins = await sb.from("products").insert({
+            name: name || null,
+            ingredients_path: ingredientsPath,
+            packet_path: packetPath,
+          });
+          if (ins.error) throw ins.error;
+
+          $("nameInput").value = "";
+          show("done");
+        } catch (err) {
+          console.error(err);
+          toast("Save failed: " + (err.message || "unknown error"));
+          show("packet");
+        }
+      };
+
+      $("againBtn").onclick = () => $("startBtn").click();
+
+      show("start");
+    </script>
+  </body>
+</html>
