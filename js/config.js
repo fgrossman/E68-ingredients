@@ -8,10 +8,10 @@
 
 const CONFIG = {
   // From Supabase: Project Settings -> API -> Project URL
-  SUPABASE_URL: "PASTE_YOUR_SUPABASE_URL_HERE",
+  SUPABASE_URL: "https://jrlkepgyigwkwxasarha.supabase.co",
 
   // From Supabase: Project Settings -> API -> Project API keys -> "anon public"
-  SUPABASE_ANON_KEY: "PASTE_YOUR_SUPABASE_ANON_KEY_HERE",
+  SUPABASE_ANON_KEY: "sb_publishable_ftxG0faWtjxK4NcQxk7Q7g_awFEVNUK",
 
   // Name of the Storage bucket (created by setup.sql / dashboard). Leave as-is.
   BUCKET: "ingredients",
