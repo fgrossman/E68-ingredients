@@ -122,15 +122,27 @@ body {
   padding: 8px;
 }
 
-/* Grid of items */
+/* Grid of items — auto-fills columns so it scales from phone to laptop.
+   ~2 columns on a narrow phone, more (smaller) tiles on wider screens. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
-@media (min-width: 560px) {
+@media (min-width: 700px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+}
+/* Subtle hover lift on devices with a real mouse (laptops/desktops). */
+@media (hover: hover) {
+  .card {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
   }
 }
 
