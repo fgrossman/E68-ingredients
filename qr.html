@@ -49,11 +49,11 @@
     <div class="wrap" id="wrap" style="visibility:hidden">
       <p class="instructions">
         Print these and distribute to families. Printing produces
-        <strong>4 sets per page</strong> (each set has an English and a Spanish
-        code) with cut lines, so you can snip the page into 4. People scan the
+        <strong>8 sets per page</strong> (each set has an English and a Spanish
+        code) with cut lines, so you can snip the page into 8. People scan the
         one in their language to see ingredients.
       </p>
-      <button class="btn accent" id="printBtn" style="margin-bottom:16px">🖨️ Print 4 sets</button>
+      <button class="btn accent" id="printBtn" style="margin-bottom:16px">🖨️ Print 8 sets</button>
 
       <div class="qr-grid">
         <div class="qr-card">
@@ -111,7 +111,7 @@
           '<div class="qr-holder">' + esSvg + "</div>" +
           '<div class="mini-cap">Escanee para ver ingredientes</div></div>' +
           "</div>";
-        $("printSheet").innerHTML = setHtml.repeat(4);
+        $("printSheet").innerHTML = setHtml.repeat(8);
       }
 
       $("printBtn").onclick = () => window.print();
