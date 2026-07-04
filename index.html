@@ -10,6 +10,14 @@
       /* Let the gallery use the width of a laptop screen (stays centered). */
       .wrap { max-width: 1120px; }
       #instructions { max-width: 820px; }
+      .zoom-controls { display: flex; gap: 8px; align-items: center; }
+      .zoom-btn {
+        background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.5);
+        border-radius: 8px; min-width: 44px; height: 40px; padding: 0 12px;
+        font-size: 1.2rem; font-weight: 700; cursor: pointer;
+      }
+      .zoom-btn:active { background: rgba(255,255,255,0.3); }
+      #zoomResetBtn { font-size: 0.95rem; font-weight: 600; }
       /* Print: show only selected ingredients, one per page, fit to one page */
       #printArea { display: none; }
       @media print {
@@ -67,6 +75,11 @@
     <div class="modal" id="modal">
       <div class="modal-head">
         <span class="hint" id="zoomHint"></span>
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="zoomOutBtn" aria-label="Zoom out">−</button>
+          <button class="zoom-btn" id="zoomResetBtn" aria-label="Reset zoom">Reset</button>
+          <button class="zoom-btn" id="zoomInBtn" aria-label="Zoom in">+</button>
+        </div>
         <button class="link-btn" id="closeBtn"></button>
       </div>
       <div class="modal-body" id="modalBody">
@@ -139,11 +152,12 @@
         $("modalImg").onload = () => {
           if (panzoom) panzoom.destroy();
           panzoom = Panzoom($("modalImg"), {
-            maxScale: 6,
+            maxScale: 5,
             minScale: 1,
-            contain: "outside",
+            step: 0.35, // used by the + / − buttons
+            animate: true,
+            cursor: "grab",
           });
-          $("modalBody").addEventListener("wheel", panzoom.zoomWithWheel);
         };
       }
       function closeModal() {
@@ -155,7 +169,23 @@
         $("modalImg").src = "";
       }
       $("closeBtn").onclick = closeModal;
-      // Double-tap to reset zoom
+
+      // Zoom buttons — always available so you can get back to normal size.
+      $("zoomInBtn").onclick = () => panzoom && panzoom.zoomIn();
+      $("zoomOutBtn").onclick = () => panzoom && panzoom.zoomOut();
+      $("zoomResetBtn").onclick = () => panzoom && panzoom.reset();
+
+      // Trackpad pinch / mouse wheel: bind once, with a gentle step so it
+      // doesn't jump. (Laptop pinch arrives as rapid ctrl+wheel events.)
+      $("modalBody").addEventListener(
+        "wheel",
+        (e) => {
+          if (panzoom) panzoom.zoomWithWheel(e, { step: 0.06 });
+        },
+        { passive: false }
+      );
+
+      // Double-tap / double-click to reset zoom.
       let lastTap = 0;
       $("modalBody").addEventListener("click", () => {
         const now = Date.now();
