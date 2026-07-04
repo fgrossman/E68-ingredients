@@ -6,6 +6,7 @@
     <title>Print QR Codes — E68</title>
     <link rel="stylesheet" href="css/style.css" />
     <style>
+      /* On-screen preview */
       .qr-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
       @media (min-width: 560px) { .qr-grid { grid-template-columns: 1fr 1fr; } }
       .qr-card {
@@ -13,13 +14,29 @@
         padding: 20px; text-align: center;
       }
       .qr-card h3 { margin: 0 0 12px; color: var(--brand-dark); }
-      .qr-card .qr { width: 240px; height: 240px; max-width: 100%; margin: 0 auto; }
-      .qr-card .qr svg, .qr-card .qr img { width: 100%; height: 100%; }
+      .qr-card .qr { width: 220px; height: 220px; max-width: 100%; margin: 0 auto; }
+      .qr .qr-svg svg, .qr-holder svg { width: 100%; height: 100%; display: block; }
       .qr-card .url { font-size: 0.8rem; color: var(--muted); word-break: break-all; margin-top: 10px; }
       .qr-card .caption { margin-top: 8px; font-weight: 600; }
+
+      /* Print sheet: 4 sets (each = English + Spanish), 2x2, with cut lines */
+      #printSheet { display: none; }
       @media print {
-        .topbar, .instructions, #printBtn { display: none !important; }
-        .qr-card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+        body * { visibility: hidden; }
+        #printSheet, #printSheet * { visibility: visible; }
+        @page { margin: 8mm; }
+        #printSheet {
+          display: grid; position: absolute; left: 0; top: 0; width: 100%;
+          grid-template-columns: 1fr 1fr; gap: 4mm;
+        }
+        .print-set {
+          border: 1px dashed #888; break-inside: avoid; padding: 5mm;
+          display: flex; gap: 6mm; align-items: center; justify-content: center;
+        }
+        .print-set .mini { text-align: center; flex: 1; }
+        .print-set .mini-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+        .print-set .qr-holder { width: 34mm; height: 34mm; margin: 0 auto; }
+        .print-set .mini-cap { font-size: 11px; margin-top: 3px; }
       }
     </style>
   </head>
@@ -28,27 +45,34 @@
       <h1>QR Codes</h1>
       <a class="link-btn" href="menu.html">Menu</a>
     </div>
+
     <div class="wrap" id="wrap" style="visibility:hidden">
       <p class="instructions">
-        Print these and distribute to families. People scan the one in
-        their language to see ingredients. (These point at this exact website.)
+        Print these and distribute to families. Printing produces
+        <strong>4 sets per page</strong> (each set has an English and a Spanish
+        code) with cut lines, so you can snip the page into 4. People scan the
+        one in their language to see ingredients.
       </p>
-      <button class="btn accent" id="printBtn" style="margin-bottom:16px">🖨️ Print these QR codes</button>
+      <button class="btn accent" id="printBtn" style="margin-bottom:16px">🖨️ Print 4 sets</button>
+
       <div class="qr-grid">
         <div class="qr-card">
           <h3>English</h3>
-          <div class="qr" id="qrEn"></div>
+          <div class="qr qr-svg" id="qrEn"></div>
           <div class="caption">Scan to find ingredients</div>
           <div class="url" id="urlEn"></div>
         </div>
         <div class="qr-card">
           <h3>Español</h3>
-          <div class="qr" id="qrEs"></div>
+          <div class="qr qr-svg" id="qrEs"></div>
           <div class="caption">Escanee para ver ingredientes</div>
           <div class="url" id="urlEs"></div>
         </div>
       </div>
     </div>
+
+    <!-- Print-only: 4 sets of English+Spanish -->
+    <div id="printSheet"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
@@ -57,22 +81,37 @@
     <script>
       const $ = (id) => document.getElementById(id);
 
-      function drawQR(elId, url) {
+      function qrSvg(url) {
         const qr = qrcode(0, "M"); // 0 = auto size, M = medium error correction
         qr.addData(url);
         qr.make();
-        // Crisp, print-friendly SVG that scales to the container.
-        $(elId).innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+        return qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
       }
 
-      function buildCodes() {
+      function build() {
         const base = new URL("index.html", window.location.href).href;
         const enUrl = base + "?lang=en";
         const esUrl = base + "?lang=es";
+        const enSvg = qrSvg(enUrl);
+        const esSvg = qrSvg(esUrl);
+
+        // On-screen preview
         $("urlEn").textContent = enUrl;
         $("urlEs").textContent = esUrl;
-        drawQR("qrEn", enUrl);
-        drawQR("qrEs", esUrl);
+        $("qrEn").innerHTML = enSvg;
+        $("qrEs").innerHTML = esSvg;
+
+        // Print sheet: 4 identical sets
+        const setHtml =
+          '<div class="print-set">' +
+          '<div class="mini"><div class="mini-title">English</div>' +
+          '<div class="qr-holder">' + enSvg + "</div>" +
+          '<div class="mini-cap">Scan to find ingredients</div></div>' +
+          '<div class="mini"><div class="mini-title">Español</div>' +
+          '<div class="qr-holder">' + esSvg + "</div>" +
+          '<div class="mini-cap">Escanee para ver ingredientes</div></div>' +
+          "</div>";
+        $("printSheet").innerHTML = setHtml.repeat(4);
       }
 
       $("printBtn").onclick = () => window.print();
@@ -81,7 +120,7 @@
         const p = await requireRole(["admin", "photographer"]);
         if (!p) return;
         $("wrap").style.visibility = "visible";
-        buildCodes();
+        build();
       })();
     </script>
   </body>
