@@ -7,7 +7,7 @@ ingredients on their phone.
 
 Everything is built with plain HTML, CSS, and JavaScript — no build step. It uses
 two free services: **Supabase** (database + photo storage + logins) and
-**Netlify** (free website hosting connected to GitHub).
+**GitHub Pages** (free website hosting connected to GitHub).
 
 ---
 
@@ -87,34 +87,25 @@ So admins can create users right from the app without an email round-trip:
    ```
 That account can now sign in and add everyone else from the **Manage users** page.
 
-### Step 5 — Put the site online with Netlify (free)
-1. Go to https://netlify.com and **Sign up with GitHub**.
-2. **Add new site → Import an existing project → GitHub**, pick `E68-ingredients`.
-3. Leave build settings empty (static site) and click **Deploy**.
-4. You'll get an address like `https://your-name.netlify.app`. Every `git push`
-   updates the live site automatically.
-
-#### Alternative: host on GitHub Pages instead of Netlify (free)
-Because the site is plain static files, it also runs on GitHub Pages — and the
-`github.io` domain is less likely to trip Chrome's "deceptive site" warning that
-random `*.netlify.app` subdomains sometimes get.
+### Step 5 — Put the site online with GitHub Pages (free)
+The site is plain static files, so GitHub Pages hosts it directly.
 
 1. The repo must be **public** for free GitHub Pages. (Safe here — `js/config.js`
    only holds the Supabase URL and the `anon public` key, which are meant to be public;
    all real security is in the database rules.) Set it under
    **Settings → General → Danger Zone → Change visibility** if needed.
-2. In the repo: **Settings → Pages**.
-3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-4. Set **Branch** to `main` and folder to **/ (root)**, then **Save**.
-5. Wait ~1 minute. Your site will be at
-   `https://fgrossman.github.io/E68-ingredients/`. Every `git push` updates it.
+2. In the repo: **Settings → Pages → Build and deployment → Source**, choose
+   **GitHub Actions**.
+3. That's it — the workflow in `.github/workflows/deploy.yml` publishes the site on
+   every `git push`. Watch it in the **Actions** tab.
+4. Your site will be at `https://fgrossman.github.io/E68-ingredients/`.
 
 All links and the QR codes are relative, so the `/E68-ingredients/` sub-path works
-automatically. The `.nojekyll` file in this repo tells GitHub to serve the files as-is.
+automatically. The `.nojekyll` file tells GitHub to serve the files as-is (no Jekyll).
 
-> Still flagged after switching? The most reliable fix is a custom domain (about
-> $12/year) pointed at either host. You can also report a false positive for your
-> current URL at https://safebrowsing.google.com/safebrowsing/report_error/.
+> Chrome flagging the site as deceptive? The most reliable fix is a custom domain
+> (about $12/year) pointed at GitHub Pages. You can also report a false positive at
+> https://safebrowsing.google.com/safebrowsing/report_error/.
 
 ### Step 6 — Print the QR codes
 Sign in → **Menu → QR codes**, then **Print**. You get an English and a Spanish QR
@@ -151,4 +142,4 @@ code pointing at your live site. Tape them to the food shelves.
   Authentication → Users.
 
 ## Costs
-$0. Supabase free tier and Netlify free tier cover this use comfortably.
+$0. Supabase free tier and GitHub Pages cover this use comfortably.
