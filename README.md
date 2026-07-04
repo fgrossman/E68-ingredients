@@ -94,6 +94,28 @@ That account can now sign in and add everyone else from the **Manage users** pag
 4. You'll get an address like `https://your-name.netlify.app`. Every `git push`
    updates the live site automatically.
 
+#### Alternative: host on GitHub Pages instead of Netlify (free)
+Because the site is plain static files, it also runs on GitHub Pages — and the
+`github.io` domain is less likely to trip Chrome's "deceptive site" warning that
+random `*.netlify.app` subdomains sometimes get.
+
+1. The repo must be **public** for free GitHub Pages. (Safe here — `js/config.js`
+   only holds the Supabase URL and the `anon public` key, which are meant to be public;
+   all real security is in the database rules.) Set it under
+   **Settings → General → Danger Zone → Change visibility** if needed.
+2. In the repo: **Settings → Pages**.
+3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+4. Set **Branch** to `main` and folder to **/ (root)**, then **Save**.
+5. Wait ~1 minute. Your site will be at
+   `https://fgrossman.github.io/E68-ingredients/`. Every `git push` updates it.
+
+All links and the QR codes are relative, so the `/E68-ingredients/` sub-path works
+automatically. The `.nojekyll` file in this repo tells GitHub to serve the files as-is.
+
+> Still flagged after switching? The most reliable fix is a custom domain (about
+> $12/year) pointed at either host. You can also report a false positive for your
+> current URL at https://safebrowsing.google.com/safebrowsing/report_error/.
+
 ### Step 6 — Print the QR codes
 Sign in → **Menu → QR codes**, then **Print**. You get an English and a Spanish QR
 code pointing at your live site. Tape them to the food shelves.
