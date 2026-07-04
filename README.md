@@ -6,106 +6,127 @@ ingredient list from the original box. Anyone can then scan a QR code and look u
 ingredients on their phone.
 
 Everything is built with plain HTML, CSS, and JavaScript — no build step. It uses
-two free services: **Supabase** (database + photo storage + admin login) and
+two free services: **Supabase** (database + photo storage + logins) and
 **Netlify** (free website hosting connected to GitHub).
 
 ---
 
-## What's in here
+## Who does what
 
-| File | What it does |
-|------|--------------|
-| `index.html` | Simple home page linking to everything |
-| `worker.html` | **Volunteers**: tap +, photograph the ingredients list, then a packet, save |
-| `view.html` | **End users**: browse packets, tap to see ingredients, pinch-zoom, multi-select & print. Language via `?lang=en` or `?lang=es` |
-| `admin.html` | **Admin**: log in (email + password) to delete photos |
-| `qr.html` | Generates printable English & Spanish QR codes pointing at your live site |
-| `supabase/setup.sql` | One script that sets up the database, storage, and security rules |
-| `js/config.js` | The only file you edit — paste your 2 Supabase keys here |
+The **home page is public** — anyone can view ingredients with no login. Staff sign in
+(top-right **Sign in** link) and get one of two roles:
+
+| Role | Can do |
+|------|--------|
+| **Photo Taker** | Take photos, view/print QR codes |
+| **Admin** | Everything a Photo Taker can, **plus** delete products and add/manage users |
+
+---
+
+## Pages
+
+| File | Who | What it does |
+|------|-----|--------------|
+| `index.html` | Everyone (public) | Home page: browse packets, tap to see ingredients, pinch-zoom, multi-select & print. Language via `?lang=en` / `?lang=es` |
+| `signin.html` | Staff | Email + password sign in |
+| `menu.html` | Staff | Menu of actions based on your role |
+| `worker.html` | Staff | Take photos: ingredients list, then a packet, save |
+| `qr.html` | Staff | View & print the English + Spanish QR codes |
+| `admin.html` | Admin | Delete foods no longer needed |
+| `users.html` | Admin | Add users, set roles, remove access |
+| `supabase/setup.sql` | — | One script that sets up the database, storage, and security rules |
+| `js/config.js` | — | The only file you edit — paste your 2 Supabase keys here |
 
 ---
 
 ## Setup — about 15 minutes, no coding
 
 ### Step 1 — Put this code in GitHub
-This code should live at `https://github.com/fgrossman/E68-ingredients`.
-If you cloned that empty repo, copy these files in, then:
+This code lives at `https://github.com/fgrossman/E68-ingredients`. From the project
+folder:
 
 ```bash
 git add .
-git commit -m "Initial E68 ingredients app"
+git commit -m "Update E68 ingredients app"
 git push
 ```
 
-### Step 2 — Create the free Supabase project (database + photos + login)
+### Step 2 — Create the free Supabase project
 1. Go to https://supabase.com and sign up (free, no credit card).
-2. Click **New project**. Pick any name and a region near you. Save the database
-   password somewhere (you won't need it for this app).
-3. Wait ~2 minutes for it to finish setting up.
-4. In the left menu open **SQL Editor → New query**. Open the file
-   `supabase/setup.sql` from this project, copy all of it, paste it in, and click
-   **Run**. You should see "Success". (This creates the table, the photo storage
-   bucket, and the security rules.)
-5. In the left menu open **Project Settings → API**. Copy two values:
+2. Click **New project**, pick a name and a nearby region, and wait ~2 minutes.
+3. Left menu → **SQL Editor → New query**. Open `supabase/setup.sql`, copy all of it,
+   paste it in, and click **Run**. You should see "Success".
+4. Left menu → **Project Settings → API**. Copy two values:
    - **Project URL**
    - **Project API keys → `anon` `public`**
-6. Open `js/config.js` in this project and paste those two values in:
+5. Open `js/config.js` and paste them in:
    ```js
    SUPABASE_URL: "https://YOURPROJECT.supabase.co",
    SUPABASE_ANON_KEY: "eyJhbGc....(long string)....",
    ```
-   Commit and push that change (`git add . && git commit -m "Add Supabase keys" && git push`).
+   Commit and push (`git add . && git commit -m "Add Supabase keys" && git push`).
 
-> The `anon public` key is safe to put in the website — that's what it's designed for.
-> Security is enforced by the rules in `setup.sql` (anyone can add/view; only logged-in
-> admins can delete).
+> The `anon public` key is meant to live in the website. Security is enforced by the
+> rules in `setup.sql` (public can view; only signed-in staff can add; only admins can
+> delete or manage users).
 
-### Step 3 — Create your admin login
-1. In Supabase, left menu → **Authentication → Users → Add user**.
-2. Enter the admin's email and a password, and (recommended) check
-   **Auto Confirm User** so they can log in immediately.
-3. That email + password is what you'll use on `admin.html`. Add more admins the same way.
+### Step 3 — Turn OFF email confirmation (needed for adding users)
+So admins can create users right from the app without an email round-trip:
+1. Left menu → **Authentication → Providers → Email**.
+2. Turn **Confirm email** OFF and save.
 
-### Step 4 — Put the site online with Netlify (free)
-1. Go to https://netlify.com and sign up (free). Choose **Sign up with GitHub**.
-2. Click **Add new site → Import an existing project → GitHub**, and pick the
-   `E68-ingredients` repository.
-3. Leave the build settings empty (this is a static site) and click **Deploy**.
-4. Netlify gives you a web address like `https://your-name.netlify.app`. That's your
-   live site. (You can rename it under **Site settings → Change site name**, or add a
-   custom domain later.)
+### Step 4 — Create your first admin
+1. Left menu → **Authentication → Users → Add user**. Enter an email + password and
+   check **Auto Confirm User**.
+2. Left menu → **SQL Editor**, and run this with that same email (it's also at the
+   bottom of `setup.sql`):
+   ```sql
+   insert into public.profiles (id, email, role)
+   select id, email, 'admin' from auth.users where email = 'you@example.com'
+   on conflict (id) do update set role = 'admin';
+   ```
+That account can now sign in and add everyone else from the **Manage users** page.
 
-Every time you `git push`, Netlify automatically updates the live site.
+### Step 5 — Put the site online with Netlify (free)
+1. Go to https://netlify.com and **Sign up with GitHub**.
+2. **Add new site → Import an existing project → GitHub**, pick `E68-ingredients`.
+3. Leave build settings empty (static site) and click **Deploy**.
+4. You'll get an address like `https://your-name.netlify.app`. Every `git push`
+   updates the live site automatically.
 
-### Step 5 — Print the QR codes
-Open `https://your-site.netlify.app/qr.html`, then tap **Print these QR codes**.
-You'll get an English and a Spanish QR code that point at your live site. Tape them
-to the food shelves.
+### Step 6 — Print the QR codes
+Sign in → **Menu → QR codes**, then **Print**. You get an English and a Spanish QR
+code pointing at your live site. Tape them to the food shelves.
 
 ---
 
 ## How people use it
 
-- **Volunteer adding food:** open `.../worker.html` → tap **+** → camera opens →
-  photograph the **ingredients list on the box** → Retake or Next → photograph **one
-  packet** → (optionally type a name) → **Save**. Repeat for the next food.
-- **Person looking up ingredients:** scans the English or Spanish QR code → reads the
-  short instructions → scrolls the packet photos → taps the one that matches → sees the
+- **Someone looking up ingredients:** scans the English or Spanish QR code (or just
+  opens the site) → scrolls the packet photos → taps the one that matches → sees the
   ingredients photo → pinches to zoom. They can also tap **Select**, choose several
-  items, and **Print** all their ingredients at once.
-- **Admin cleaning up:** open `.../admin.html` → log in → tap **Delete** on anything no
-  longer needed.
+  items, and **Print** all their ingredients at once (one image per page).
+- **Photo Taker / Admin adding food:** Sign in → **Take photos** → tap **+** → camera
+  opens → photograph the **ingredients list on the box** → Retake or Next → photograph
+  **one packet** → (optionally type a name) → **Save**. Repeat for the next food.
+- **Admin managing users:** Sign in → **Manage users** → add an email, a temporary
+  password, and pick **Admin** or **Photo Taker**. Change a role from the dropdown, or
+  **Remove** to revoke access.
+- **Admin cleaning up products:** Sign in → **Manage products** → **Delete** anything
+  no longer needed.
 
 ---
 
 ## Notes & tweaks
-- **Photos are shrunk** on the phone before upload (max 1600px) to stay well within the
-  Supabase free tier (1 GB storage, ~5,000+ photos at this size). Adjust in `js/config.js`.
-- **Languages:** English and Spanish live in `js/i18n.js`. Edit the wording there, or
-  add another language by copying the `en` block.
+- **Photos are shrunk** on the phone before upload (max 1600px) to stay within the
+  Supabase free tier. Adjust in `js/config.js`.
+- **Free tier limits:** 1 GB photo storage (~1,000–2,000 foods) and 5 GB/month of
+  download bandwidth. Fine for a single pantry.
+- **Languages:** English & Spanish live in `js/i18n.js`.
 - **Colors / wording:** brand colors are at the top of `css/style.css`.
-- **Free tiers:** Supabase free projects pause after ~1 week of zero activity; opening
-  the site wakes them. For a regularly-used site this won't be an issue.
+- **Removing a user** deletes their access profile so they can no longer do anything.
+  If you also want to delete the underlying login record entirely, do it in Supabase →
+  Authentication → Users.
 
 ## Costs
 $0. Supabase free tier and Netlify free tier cover this use comfortably.

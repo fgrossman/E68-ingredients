@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in — E68</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>Staff Sign In</h1>
+      <a class="link-btn" href="index.html">Home</a>
+    </div>
+    <div class="wrap">
+      <p class="instructions">Sign in to take photos or manage the site.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="error hidden" id="err"></div>
+        <button class="btn block" id="submit" type="submit">Sign in</button>
+      </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const sb = getClient();
+
+      function showErr(msg) {
+        $("err").textContent = msg;
+        $("err").classList.remove("hidden");
+      }
+
+      // Already signed in with a role? Go straight to the menu.
+      (async () => {
+        const p = await currentProfile();
+        if (p && p.role) window.location.replace("menu.html");
+      })();
+
+      $("loginForm").onsubmit = async (e) => {
+        e.preventDefault();
+        $("err").classList.add("hidden");
+        $("submit").disabled = true;
+        const { error } = await sb.auth.signInWithPassword({
+          email: $("email").value.trim(),
+          password: $("password").value,
+        });
+        if (error) {
+          $("submit").disabled = false;
+          showErr(error.message);
+          return;
+        }
+        // Confirm the account has a role assigned.
+        const p = await currentProfile();
+        if (!p || !p.role) {
+          await sb.auth.signOut();
+          $("submit").disabled = false;
+          showErr(
+            "This account has no access yet. Ask an administrator to add you."
+          );
+          return;
+        }
+        window.location.replace("menu.html");
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manage Users — E68</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .role-select { padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; }
+      .row .meta .name { word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>Manage Users</h1>
+      <a class="link-btn" href="menu.html">Menu</a>
+    </div>
+    <div class="wrap" id="wrap" style="visibility:hidden">
+      <p class="instructions">
+        Add volunteers and set each as <strong>Admin</strong> (full access) or
+        <strong>Photo Taker</strong> (photos &amp; QR codes only).
+      </p>
+
+      <h3 style="margin:6px 0 10px">Add a user</h3>
+      <form id="addForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="password">Temporary password (min 6 characters)</label>
+          <input id="password" type="text" autocomplete="off" minlength="6" required />
+        </div>
+        <div class="field">
+          <label for="role">Role</label>
+          <select id="role" class="role-select">
+            <option value="photographer">Photo Taker</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="error hidden" id="addErr"></div>
+        <button class="btn block" id="addBtn" type="submit">Add user</button>
+      </form>
+
+      <h3 style="margin:24px 0 10px">Current users</h3>
+      <div id="list"><div class="center"><div class="spinner"></div>Loading…</div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const sb = getClient();
+      let me = null;
+
+      function esc(s) {
+        return (s || "").replace(/[&<>"']/g, (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+        );
+      }
+
+      async function loadList() {
+        const box = $("list");
+        const { data, error } = await sb
+          .from("profiles")
+          .select("id,email,role,created_at")
+          .order("created_at", { ascending: true });
+        if (error) {
+          box.innerHTML = '<div class="center error">' + esc(error.message) + "</div>";
+          return;
+        }
+        const list = document.createElement("div");
+        list.className = "card-list";
+        data.forEach((u) => {
+          const isMe = u.id === me.id;
+          const row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML =
+            '<div class="meta"><div class="name">' +
+            esc(u.email) +
+            (isMe ? " <em>(you)</em>" : "") +
+            "</div></div>";
+
+          const sel = document.createElement("select");
+          sel.className = "role-select";
+          sel.innerHTML =
+            '<option value="photographer">Photo Taker</option><option value="admin">Admin</option>';
+          sel.value = u.role;
+          sel.disabled = isMe; // don't let an admin change their own role
+          sel.onchange = async () => {
+            sel.disabled = true;
+            const { error } = await sb
+              .from("profiles")
+              .update({ role: sel.value })
+              .eq("id", u.id);
+            sel.disabled = isMe;
+            if (error) {
+              alert("Could not change role: " + error.message);
+              sel.value = u.role;
+            } else {
+              u.role = sel.value;
+            }
+          };
+          row.appendChild(sel);
+
+          if (!isMe) {
+            const del = document.createElement("button");
+            del.className = "btn danger";
+            del.textContent = "Remove";
+            del.onclick = async () => {
+              if (!confirm("Remove access for " + u.email + "?")) return;
+              del.disabled = true;
+              const { error } = await sb.from("profiles").delete().eq("id", u.id);
+              if (error) {
+                alert("Could not remove: " + error.message);
+                del.disabled = false;
+              } else {
+                row.remove();
+              }
+            };
+            row.appendChild(del);
+          }
+          list.appendChild(row);
+        });
+        box.innerHTML = "";
+        box.appendChild(list);
+      }
+
+      $("addForm").onsubmit = async (e) => {
+        e.preventDefault();
+        $("addErr").classList.add("hidden");
+        $("addBtn").disabled = true;
+        $("addBtn").textContent = "Adding…";
+        try {
+          await createStaffUser(
+            $("email").value.trim(),
+            $("password").value,
+            $("role").value
+          );
+          $("email").value = "";
+          $("password").value = "";
+          $("role").value = "photographer";
+          await loadList();
+        } catch (err) {
+          $("addErr").textContent = err.message || String(err);
+          $("addErr").classList.remove("hidden");
+        }
+        $("addBtn").disabled = false;
+        $("addBtn").textContent = "Add user";
+      };
+
+      (async () => {
+        me = await requireRole(["admin"]);
+        if (!me) return;
+        $("wrap").style.visibility = "visible";
+        loadList();
+      })();
+    </script>
+  </body>
+</html>

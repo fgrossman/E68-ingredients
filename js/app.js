@@ -71,3 +71,61 @@ function uid() {
   if (crypto && crypto.randomUUID) return crypto.randomUUID();
   return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
 }
+
+/* ============================================================
+   Authentication & roles
+   ============================================================ */
+
+// Returns { id, email, role } for the signed-in user, or null if not signed in.
+// role is 'admin', 'photographer', or null (signed in but no access assigned).
+async function currentProfile() {
+  const sb = getClient();
+  const { data: s } = await sb.auth.getSession();
+  if (!s || !s.session) return null;
+  const user = s.session.user;
+  const { data, error } = await sb
+    .from("profiles")
+    .select("id,email,role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error || !data) return { id: user.id, email: user.email, role: null };
+  return data;
+}
+
+// Guard a page: redirect to sign-in unless the user has one of `allowedRoles`.
+// Returns the profile if allowed. Use at the top of protected pages.
+async function requireRole(allowedRoles) {
+  const p = await currentProfile();
+  if (!p || !p.role || (allowedRoles && !allowedRoles.includes(p.role))) {
+    window.location.replace("signin.html");
+    return null;
+  }
+  return p;
+}
+
+async function signOut(dest) {
+  await getClient().auth.signOut();
+  window.location.replace(dest || "index.html");
+}
+
+// Create a new staff user WITHOUT disturbing the current admin's session.
+// Uses a throwaway Supabase client so signUp doesn't replace the admin login.
+// Requires "Confirm email" to be OFF in Supabase (see README).
+// Returns the new user's id.
+async function createStaffUser(email, password, role) {
+  const temp = window.supabase.createClient(
+    CONFIG.SUPABASE_URL,
+    CONFIG.SUPABASE_ANON_KEY,
+    { auth: { persistSession: false, storageKey: "e68-temp-signup" } }
+  );
+  const { data, error } = await temp.auth.signUp({ email, password });
+  if (error) throw error;
+  const newId = data.user && data.user.id;
+  if (!newId) throw new Error("User was created but no id was returned.");
+  // Insert the profile with the chosen role, using the admin's own session.
+  const ins = await getClient()
+    .from("profiles")
+    .insert({ id: newId, email, role });
+  if (ins.error) throw ins.error;
+  return newId;
+}

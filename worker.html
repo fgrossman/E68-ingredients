@@ -9,10 +9,10 @@
   <body>
     <div class="topbar">
       <h1>Add Food Photos</h1>
-      <a class="link-btn" href="index.html">Home</a>
+      <a class="link-btn" href="menu.html">Menu</a>
     </div>
 
-    <div class="wrap">
+    <div class="wrap" style="visibility:hidden">
       <p class="instructions">
         Take 2 photos for each food: first the <strong>ingredients list</strong>
         on the box, then one <strong>individual packet</strong> from inside.
@@ -207,7 +207,13 @@
 
       $("againBtn").onclick = () => $("startBtn").click();
 
-      show("start");
+      // Require sign-in (admin or photo taker) before showing the page.
+      (async () => {
+        const p = await requireRole(["admin", "photographer"]);
+        if (!p) return; // redirected to sign-in
+        document.querySelector(".wrap").style.visibility = "visible";
+        show("start");
+      })();
     </script>
   </body>
 </html>
